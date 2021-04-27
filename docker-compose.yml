@@ -1,0 +1,41 @@
+version: '2'
+
+services:
+  db:
+      image: postgres:latest
+      environment:
+        POSTGRES_PASSWORD: passw0rd
+        POSTGRES_USER: postgres
+        POSTGRES_DB: AMAZON
+      restart: always
+      volumes:
+        - data-volume:/var/lib/postgresql/data
+  web-init:
+      build: ./django_amazon
+      command: bash ./initserver.sh
+      volumes:
+        - ./django_amazon:/code
+      depends_on:
+        - db
+  web:
+      build: ./django_amazon
+      user: nobody
+      command: /code/runserver.sh
+      volumes:
+        - ./django_amazon:/code
+      ports:
+        - "8000:8000"
+      depends_on:
+        - web-init
+  # backend should run after the front-end has setted up(since we need the data from it, e.g. warehouse)
+  backend:
+    build: ./backend
+    command: bash -c "./gradlew run"
+    ports:
+      - "9999:9999" # port for checkUser
+      - "8888:8888" # port for django
+      - "34567:34567" # port for UPS
+    depends_on:
+      - web
+volumes:
+   data-volume: 
